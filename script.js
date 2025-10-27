@@ -1,109 +1,64 @@
-// Real-time Crypto Candlestick Chart (Binance API + ApexCharts)
+// 🪙 Fetch live crypto price data from Binance API
+async function fetchLiveData() {
+  try {
+    const response = await fetch('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=20');
+    const data = await response.json();
 
-let candleData = [];
-let chart;
-let currentSymbol = "btcusdt";
+    const candleData = data.map(d => ({
+      x: new Date(d[0]),
+      y: [parseFloat(d[1]), parseFloat(d[2]), parseFloat(d[3]), parseFloat(d[4])]
+    }));
 
-// Elements
-const chartElement = document.querySelector("#chart");
-const priceDisplay = document.querySelector("#currentPrice");
-const changeDisplay = document.querySelector("#priceChange");
-const titleDisplay = document.querySelector("#pairTitle");
-const symbolSelect = document.querySelector("#symbolSelect");
+    return candleData;
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return [];
+  }
+}
 
-// Initialize chart
-function initChart() {
-  chart = new ApexCharts(chartElement, {
+// 🧠 Initialize chart
+async function initChart() {
+  const candleData = await fetchLiveData();
+
+  const options = {
     chart: {
-      type: "candlestick",
+      type: 'candlestick',
       height: 600,
-      background: "#181b20",
-      toolbar: { show: true },
+      background: '#181b20',
+      toolbar: { show: true }
     },
-    series: [{ data: [] }],
+    title: {
+      text: 'BTC/USDT – Live Market Chart',
+      align: 'left',
+      style: { color: '#ffe066' }
+    },
+    series: [{ data: candleData }],
     xaxis: {
-      type: "datetime",
-      labels: { style: { colors: "#fff" } },
+      type: 'datetime',
+      labels: { style: { colors: '#fff' } }
     },
     yaxis: {
       tooltip: { enabled: true },
-      labels: { style: { colors: "#fff" } },
+      labels: { style: { colors: '#fff' } }
     },
     plotOptions: {
       candlestick: {
         colors: {
-          upward: "#2ecb71",
-          downward: "#e74c3c",
-        },
-      },
-    },
-  });
-  chart.render();
-}
-
-// Load candles from Binance REST API
-async function loadInitialData(symbol) {
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol.toUpperCase()}&interval=1m&limit=100`;
-  const res = await fetch(url);
-  const data = await res.json();
-  candleData = data.map((d) => ({
-    x: new Date(d[0]),
-    y: [parseFloat(d[1]), parseFloat(d[2]), parseFloat(d[3]), parseFloat(d[4])],
-  }));
-  chart.updateSeries([{ data: candleData }]);
-  updatePrice(candleData[candleData.length - 1].y[3]);
-}
-
-// WebSocket live updates
-let socket;
-
-function connectWebSocket(symbol) {
-  if (socket) socket.close();
-
-  socket = new WebSocket(`wss://stream.binance.com:9443/ws/${symbol}@kline_1m`);
-
-  socket.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-    const k = msg.k;
-
-    const candle = {
-      x: new Date(k.t),
-      y: [parseFloat(k.o), parseFloat(k.h), parseFloat(k.l), parseFloat(k.c)],
-    };
-
-    const last = candleData[candleData.length - 1];
-    if (last && last.x.getTime() === candle.x.getTime()) {
-      candleData[candleData.length - 1] = candle;
-    } else {
-      candleData.push(candle);
-      if (candleData.length > 100) candleData.shift();
+          upward: '#2ecb71',
+          downward: '#e74c3c'
+        }
+      }
     }
-
-    chart.updateSeries([{ data: candleData }]);
-    updatePrice(k.c);
   };
 
-  socket.onclose = () => setTimeout(() => connectWebSocket(symbol), 3000);
+  const chart = new ApexCharts(document.querySelector("#chart"), options);
+  chart.render();
+
+  // 🔄 Auto-update every 10 seconds
+  setInterval(async () => {
+    const newData = await fetchLiveData();
+    chart.updateSeries([{ data: newData }]);
+  }, 10000);
 }
 
-function updatePrice(latestPrice) {
-  priceDisplay.textContent = parseFloat(latestPrice).toFixed(2);
-
-  const prevClose = candleData[candleData.length - 2]?.y[3];
-  if (!prevClose) return;
-
-  const change = ((latestPrice - prevClose) / prevClose) * 100;
-  changeDisplay.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
-  changeDisplay.style.color = change >= 0 ? "#2ecb71" : "#e74c3c";
-}
-
-// Switch symbol when dropdown changes
-symbolSelect.addEventListener("change", () => {
-  currentSymbol = symbolSelect.value;
-  titleDisplay.textContent = currentSymbol.toUpperCase();
-  loadInitialData(currentSymbol).then(() => connectWebSocket(currentSymbol));
-});
-
-// Init
 initChart();
-loadInitialData(currentSymbol).then(() => connectWebSocket(currentSymbol));
