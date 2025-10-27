@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Crypto Live Chart</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+  <header>
+    <div class="logo">💹 CRYPTOWATCH</div>
+    <div class="pair-selector">
+      <select id="symbolSelect">
+        <option value="btcusdt">BTC/USDT</option>
+        <option value="ethusdt">ETH/USDT</option>
+        <option value="bnbusdt">BNB/USDT</option>
+        <option value="dogeusdt">DOGE/USDT</option>
+      </select>
+    </div>
+  </header>
+
+  <main>
+    <section id="stats">
+      <h2 id="pairTitle">BTC/USDT</h2>
+      <p id="currentPrice">Loading...</p>
+      <p id="priceChange">–</p>
+    </section>
+
+    <section id="chart"></section>
+  </main>
+
+  <footer>
+    <p>Live Crypto Candlestick Chart – Powered by Binance API</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
